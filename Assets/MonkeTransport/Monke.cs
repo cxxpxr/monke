@@ -26,20 +26,20 @@ public class Monke : Transport
 
     private byte[] _nonce;
 
-    public override int GetMaxPacketSize(int channelId = 0) => CommunicationTransport.GetMaxPacketSize(channelId);
-    public override bool ServerDisconnect(int connectionId) => CommunicationTransport.ServerDisconnect(connectionId);
     public override string ServerGetClientAddress(int connectionId) => CommunicationTransport.ServerGetClientAddress(connectionId);
+    public override bool ServerDisconnect(int connectionId) => CommunicationTransport.ServerDisconnect(connectionId);
+    public override int GetMaxPacketSize(int channelId = 0) => CommunicationTransport.GetMaxPacketSize(channelId);
     public override void ServerEarlyUpdate() => CommunicationTransport.ServerEarlyUpdate();
     public override void ClientEarlyUpdate() => CommunicationTransport.ClientEarlyUpdate();
-    public override bool ClientConnected() => CommunicationTransport.ClientConnected();
     public override void ClientDisconnect() => CommunicationTransport.ClientDisconnect();
     public override void ClientLateUpdate() => CommunicationTransport.ClientLateUpdate();
-    public override bool ServerActive() => CommunicationTransport.ServerActive();
     public override void ServerLateUpdate() => CommunicationTransport.ServerLateUpdate();
+    public override bool ClientConnected() => CommunicationTransport.ClientConnected();
+    public override bool ServerActive() => CommunicationTransport.ServerActive();
     public override void ServerStop() => CommunicationTransport.ServerStop();
+    public override bool Available() => CommunicationTransport.Available();
     public override Uri ServerUri() => CommunicationTransport.ServerUri();
     public override void Shutdown() => CommunicationTransport.Shutdown();
-    public override bool Available() => CommunicationTransport.Available();
 
     private void Start()
     {
@@ -161,7 +161,6 @@ public class Monke : Transport
         GenerateInitialKeyPair();
         CommunicationTransport.ClientConnect(address);
     }
-
 
     public override void ClientSend(int channelId, ArraySegment<byte> segment)
     {

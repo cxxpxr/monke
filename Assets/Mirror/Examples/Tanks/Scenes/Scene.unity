@@ -451,8 +451,8 @@ GameObject:
   - component: {fileID: 1282001518}
   - component: {fileID: 1282001520}
   - component: {fileID: 1282001519}
-  - component: {fileID: 1282001521}
   - component: {fileID: 1282001522}
+  - component: {fileID: 1282001521}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -510,7 +510,7 @@ MonoBehaviour:
   serverBatchInterval: 0
   offlineScene: 
   onlineScene: 
-  transport: {fileID: 1282001521}
+  transport: {fileID: 1282001522}
   networkAddress: localhost
   maxConnections: 100
   disconnectInactiveConnections: 0
