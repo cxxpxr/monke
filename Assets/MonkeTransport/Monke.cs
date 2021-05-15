@@ -12,7 +12,7 @@ public enum OpCodes : byte
 
 }
 
-public class HydroTransport : Transport
+public class Monke : Transport
 {
 
     [Header("Connection Variables")]
@@ -216,7 +216,7 @@ public class HydroTransport : Transport
     public override void Shutdown() => CommunicationTransport.Shutdown();
 }
 
-public static class HydroTools
+public static class MonkeTools
 {
     public static void WriteByte(this byte[] data, ref int position, byte value)
     {
