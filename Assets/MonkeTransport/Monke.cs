@@ -20,9 +20,26 @@ public class Monke : Transport
 
     private KeyPair _keyPair = default(KeyPair);
     private Dictionary<int, byte[]> _serverSessions;
-    private byte[] _serverPublicKey;
 
+    private byte[] _serverPublicKey;
     private byte[] _clientSendBuffer;
+
+    private byte[] _nonce;
+
+    public override int GetMaxPacketSize(int channelId = 0) => CommunicationTransport.GetMaxPacketSize(channelId);
+    public override bool ServerDisconnect(int connectionId) => CommunicationTransport.ServerDisconnect(connectionId);
+    public override string ServerGetClientAddress(int connectionId) => CommunicationTransport.ServerGetClientAddress(connectionId);
+    public override void ServerEarlyUpdate() => CommunicationTransport.ServerEarlyUpdate();
+    public override void ClientEarlyUpdate() => CommunicationTransport.ClientEarlyUpdate();
+    public override bool ClientConnected() => CommunicationTransport.ClientConnected();
+    public override void ClientDisconnect() => CommunicationTransport.ClientDisconnect();
+    public override void ClientLateUpdate() => CommunicationTransport.ClientLateUpdate();
+    public override bool ServerActive() => CommunicationTransport.ServerActive();
+    public override void ServerLateUpdate() => CommunicationTransport.ServerLateUpdate();
+    public override void ServerStop() => CommunicationTransport.ServerStop();
+    public override Uri ServerUri() => CommunicationTransport.ServerUri();
+    public override void Shutdown() => CommunicationTransport.Shutdown();
+    public override bool Available() => CommunicationTransport.Available();
 
     private void Start()
     {
@@ -75,11 +92,11 @@ public class Monke : Transport
                     break;
                 case OpCodes.Data:
                     byte[] mirrorData = rawData.ReadBytes(ref pos);
-                    byte[] nonce = rawData.ReadBytes(ref pos);
+                    _nonce = rawData.ReadBytes(ref pos);
 
                     if (_serverSessions.ContainsKey(conn))
                     {
-                        byte[] outputData = PublicKeyBox.Open(mirrorData, nonce, _keyPair.PrivateKey, _serverSessions[conn]);
+                        byte[] outputData = PublicKeyBox.Open(mirrorData, _nonce, _keyPair.PrivateKey, _serverSessions[conn]);
 
                         OnServerDataReceived?.Invoke(conn, new ArraySegment<byte>(outputData), channel);
                     }
@@ -125,9 +142,9 @@ public class Monke : Transport
                     break;
                 case OpCodes.Data:
                     byte[] mirrorData = rawData.ReadBytes(ref pos);
-                    byte[] nonce = rawData.ReadBytes(ref pos);
+                    _nonce = rawData.ReadBytes(ref pos);
 
-                    byte[] outputData = PublicKeyBox.Open(mirrorData, nonce, _keyPair.PrivateKey, _serverPublicKey);
+                    byte[] outputData = PublicKeyBox.Open(mirrorData, _nonce, _keyPair.PrivateKey, _serverPublicKey);
                     OnClientDataReceived?.Invoke(new ArraySegment<byte>(outputData), channel);
 
                     break;
@@ -139,24 +156,12 @@ public class Monke : Transport
         }
     }
 
-    public override bool Available() => CommunicationTransport.Available();
-
     public override void ClientConnect(string address)
     {
         GenerateInitialKeyPair();
         CommunicationTransport.ClientConnect(address);
     }
 
-    public override bool ClientConnected() => CommunicationTransport.ClientConnected();
-
-    public override void ClientDisconnect()
-    {
-        CommunicationTransport.ClientDisconnect();
-    }
-
-    public override void ClientEarlyUpdate() => CommunicationTransport.ClientEarlyUpdate();
-
-    public override void ClientLateUpdate() => CommunicationTransport.ClientLateUpdate();
 
     public override void ClientSend(int channelId, ArraySegment<byte> segment)
     {
@@ -166,21 +171,13 @@ public class Monke : Transport
             _clientSendBuffer.WriteByte(ref pos, (byte)OpCodes.Data);
             byte[] realData = new byte[segment.Count];
             Buffer.BlockCopy(segment.Array, segment.Offset, realData, 0, segment.Count);
-            byte[] nonce = PublicKeyBox.GenerateNonce();
+            _nonce = PublicKeyBox.GenerateNonce();
 
-            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, nonce, _keyPair.PrivateKey, _serverPublicKey));
-            _clientSendBuffer.WriteBytes(ref pos, nonce);
+            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, _nonce, _keyPair.PrivateKey, _serverPublicKey));
+            _clientSendBuffer.WriteBytes(ref pos, _nonce);
             CommunicationTransport.ClientSend(channelId, new ArraySegment<byte>(_clientSendBuffer, 0, pos));
         }
     }
-
-    public override int GetMaxPacketSize(int channelId = 0) => CommunicationTransport.GetMaxPacketSize(channelId);
-
-    public override bool ServerActive() => CommunicationTransport.ServerActive();
-
-    public override bool ServerDisconnect(int connectionId) => CommunicationTransport.ServerDisconnect(connectionId);
-
-    public override string ServerGetClientAddress(int connectionId) => CommunicationTransport.ServerGetClientAddress(connectionId);
 
     public override void ServerSend(int connectionId, int channelId, ArraySegment<byte> segment)
     {
@@ -190,17 +187,13 @@ public class Monke : Transport
             _clientSendBuffer.WriteByte(ref pos, (byte)OpCodes.Data);
             byte[] realData = new byte[segment.Count];
             Buffer.BlockCopy(segment.Array, segment.Offset, realData, 0, segment.Count);
-            byte[] nonce = PublicKeyBox.GenerateNonce();
+            _nonce = PublicKeyBox.GenerateNonce();
 
-            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, nonce, _keyPair.PrivateKey, _serverSessions[connectionId]));
-            _clientSendBuffer.WriteBytes(ref pos, nonce);
+            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, _nonce, _keyPair.PrivateKey, _serverSessions[connectionId]));
+            _clientSendBuffer.WriteBytes(ref pos, _nonce);
             CommunicationTransport.ServerSend(connectionId, channelId, new ArraySegment<byte>(_clientSendBuffer, 0, pos));
         }
     }
-
-    public override void ServerEarlyUpdate() => CommunicationTransport.ServerEarlyUpdate();
-
-    public override void ServerLateUpdate() => CommunicationTransport.ServerLateUpdate();
 
     public override void ServerStart()
     {
@@ -208,12 +201,6 @@ public class Monke : Transport
         _serverSessions = new Dictionary<int, byte[]>();
         CommunicationTransport.ServerStart();
     }
-
-    public override void ServerStop() => CommunicationTransport.ServerStop();
-
-    public override Uri ServerUri() => CommunicationTransport.ServerUri();
-
-    public override void Shutdown() => CommunicationTransport.Shutdown();
 }
 
 public static class MonkeTools
