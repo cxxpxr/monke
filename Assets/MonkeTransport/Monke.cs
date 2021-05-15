@@ -18,6 +18,8 @@ public class Monke : Transport
     [Header("Connection Variables")]
     public Transport CommunicationTransport;
 
+    public bool showDebugLogs = false;
+
     private KeyPair _keyPair = default(KeyPair);
     private Dictionary<int, byte[]> _serverSessions;
 
@@ -48,6 +50,10 @@ public class Monke : Transport
     {
         _clientSendBuffer = new byte[CommunicationTransport.GetMaxPacketSize()];
         SetupCallbacks();
+
+        if (showDebugLogs)
+            Debug.Log($"<color=green>MONKE | MONKE STARTED SUCCESSFULLY!</color>");
+
     }
 
     private void SetupCallbacks()
@@ -65,6 +71,9 @@ public class Monke : Transport
     void GenerateInitialKeyPair()
     {
         _keyPair = PublicKeyBox.GenerateKeyPair();
+
+        if (showDebugLogs)
+            Debug.Log($"<color=green>MONKE | KEYPAIR GENERATED!</color>");
     }
 
     private void OnServerConnect(int conn)
@@ -91,6 +100,9 @@ public class Monke : Transport
 
                     _serverSessions.Add(conn, clientPublicKey);
 
+                    if (showDebugLogs)
+                        Debug.Log($"<color=green>MONKE | SERVER RECIEVED CLIENT PUBLIC KEY!</color>");
+
                     OnServerConnected?.Invoke(conn);
                     break;
                 case OpCodes.Data:
@@ -100,10 +112,12 @@ public class Monke : Transport
                     if (_serverSessions.ContainsKey(conn))
                     {
                         _encryptionBuffer = PublicKeyBox.Open(_readBuffer, _nonce, _keyPair.PrivateKey, _serverSessions[conn]);
-
                         OnServerDataReceived?.Invoke(conn, new ArraySegment<byte>(_encryptionBuffer), channel);
-                    }
 
+                        if (showDebugLogs)
+                            Debug.Log($"<color=green>MONKE | SERVER DATA | RAW DATA: " + _readBuffer.Length + " DATA DECRYPTED FROM CONN ID: " + conn + " SIZE: " + _encryptionBuffer.Length+"</color>" + 
+                            " <color=yellow>DELTA: " + (_readBuffer.Length - _encryptionBuffer.Length) + "</color>");
+                    }
                     break;
             }
         }
@@ -140,6 +154,9 @@ public class Monke : Transport
                     _clientSendBuffer.WriteBytes(ref pos, _keyPair.PublicKey);
                     CommunicationTransport.ClientSend(Channels.Reliable, new ArraySegment<byte>(_clientSendBuffer, 0, pos));
 
+                    if (showDebugLogs)
+                        Debug.Log($"<color=green>MONKE | CLIENT RECIEVED SERVER PUBLIC KEY!</color>");
+
                     OnClientConnected?.Invoke();
 
                     break;
@@ -149,6 +166,11 @@ public class Monke : Transport
 
                     _encryptionBuffer = PublicKeyBox.Open(_readBuffer, _nonce, _keyPair.PrivateKey, _serverPublicKey);
                     OnClientDataReceived?.Invoke(new ArraySegment<byte>(_encryptionBuffer), channel);
+
+
+                    if (showDebugLogs)
+                        Debug.Log($"<color=green>MONKE | CLIENT DATA | RAW DATA: " + _readBuffer.Length + " DECRYPTED DATA LENGTH: " + _encryptionBuffer.Length+"</color>" +
+                            " <color=yellow>DELTA: " + (_readBuffer.Length - _encryptionBuffer.Length) + "</color>");
 
                     break;
             }
