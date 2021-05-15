@@ -23,6 +23,9 @@ public class Monke : Transport
 
     private byte[] _serverPublicKey;
     private byte[] _clientSendBuffer;
+    private byte[] _readBuffer;
+    private byte[] _encryptionBuffer;
+    private byte[] _writeBuffer;
 
     private byte[] _nonce;
 
@@ -91,14 +94,14 @@ public class Monke : Transport
                     OnServerConnected?.Invoke(conn);
                     break;
                 case OpCodes.Data:
-                    byte[] mirrorData = rawData.ReadBytes(ref pos);
+                    _readBuffer = rawData.ReadBytes(ref pos);
                     _nonce = rawData.ReadBytes(ref pos);
 
                     if (_serverSessions.ContainsKey(conn))
                     {
-                        byte[] outputData = PublicKeyBox.Open(mirrorData, _nonce, _keyPair.PrivateKey, _serverSessions[conn]);
+                        _encryptionBuffer = PublicKeyBox.Open(_readBuffer, _nonce, _keyPair.PrivateKey, _serverSessions[conn]);
 
-                        OnServerDataReceived?.Invoke(conn, new ArraySegment<byte>(outputData), channel);
+                        OnServerDataReceived?.Invoke(conn, new ArraySegment<byte>(_encryptionBuffer), channel);
                     }
 
                     break;
@@ -141,11 +144,11 @@ public class Monke : Transport
 
                     break;
                 case OpCodes.Data:
-                    byte[] mirrorData = rawData.ReadBytes(ref pos);
+                    _readBuffer = rawData.ReadBytes(ref pos);
                     _nonce = rawData.ReadBytes(ref pos);
 
-                    byte[] outputData = PublicKeyBox.Open(mirrorData, _nonce, _keyPair.PrivateKey, _serverPublicKey);
-                    OnClientDataReceived?.Invoke(new ArraySegment<byte>(outputData), channel);
+                    _encryptionBuffer = PublicKeyBox.Open(_readBuffer, _nonce, _keyPair.PrivateKey, _serverPublicKey);
+                    OnClientDataReceived?.Invoke(new ArraySegment<byte>(_encryptionBuffer), channel);
 
                     break;
             }
@@ -168,11 +171,11 @@ public class Monke : Transport
         {
             int pos = 0;
             _clientSendBuffer.WriteByte(ref pos, (byte)OpCodes.Data);
-            byte[] realData = new byte[segment.Count];
-            Buffer.BlockCopy(segment.Array, segment.Offset, realData, 0, segment.Count);
+            _writeBuffer = new byte[segment.Count];
+            Buffer.BlockCopy(segment.Array, segment.Offset, _writeBuffer, 0, segment.Count);
             _nonce = PublicKeyBox.GenerateNonce();
 
-            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, _nonce, _keyPair.PrivateKey, _serverPublicKey));
+            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(_writeBuffer, _nonce, _keyPair.PrivateKey, _serverPublicKey));
             _clientSendBuffer.WriteBytes(ref pos, _nonce);
             CommunicationTransport.ClientSend(channelId, new ArraySegment<byte>(_clientSendBuffer, 0, pos));
         }
@@ -184,11 +187,11 @@ public class Monke : Transport
         {
             int pos = 0;
             _clientSendBuffer.WriteByte(ref pos, (byte)OpCodes.Data);
-            byte[] realData = new byte[segment.Count];
-            Buffer.BlockCopy(segment.Array, segment.Offset, realData, 0, segment.Count);
+            _writeBuffer = new byte[segment.Count];
+            Buffer.BlockCopy(segment.Array, segment.Offset, _writeBuffer, 0, segment.Count);
             _nonce = PublicKeyBox.GenerateNonce();
 
-            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(realData, _nonce, _keyPair.PrivateKey, _serverSessions[connectionId]));
+            _clientSendBuffer.WriteBytes(ref pos, PublicKeyBox.Create(_writeBuffer, _nonce, _keyPair.PrivateKey, _serverSessions[connectionId]));
             _clientSendBuffer.WriteBytes(ref pos, _nonce);
             CommunicationTransport.ServerSend(connectionId, channelId, new ArraySegment<byte>(_clientSendBuffer, 0, pos));
         }
