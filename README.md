@@ -13,7 +13,7 @@ Prevent hackers from spying on your monkey business!
 
 # What it does
 
-Monke currently only encrypts outgoing messages and decrypts incoming messages.
+Monke currently ONLY encrypts outgoing messages and decrypts incoming messages.
 It is NOT a full fledged security solution for Mirror.
 
 # Future
